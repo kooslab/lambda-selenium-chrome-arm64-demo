@@ -19,6 +19,8 @@ def lambda_handler(event=None, context=None):
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--ignore-certificate-errors")
+    chrome_options.add_argument("--ignore-ssl-errors")
     # If Chromium is not on the default PATH, specify the binary location:
     # chrome_options.binary_location = "/usr/bin/chromium-browser"
     # (Adjust this if you install Chrome/Chromium somewhere else)
