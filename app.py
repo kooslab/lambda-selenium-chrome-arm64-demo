@@ -11,10 +11,17 @@ def lambda_handler(event=None, context=None):
     # Path to the ChromeDriver binary (as installed in the Dockerfile)
 
     load_dotenv()
-    chromedriver_path = os.getenv("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
+    # Update the chrome binary and driver paths
+    # this is for linux arm64
+    chrome_binary_path = "/opt/chrome/chrome"
+    chromedriver_path = "/opt/chromedriver"
+
+    # for mac osx m1
+    # chromedriver_path = os.getenv("CHROMEDRIVER_PATH", "/usr/local/bin/chromedriver")
 
     # Create Chrome options
     chrome_options = Options()
+    chrome_options.binary_location = chrome_binary_path  # Specify the Chrome binary location
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
