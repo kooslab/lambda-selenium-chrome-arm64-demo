@@ -1,43 +1,29 @@
-FROM public.ecr.aws/lambda/python:3.9-arm64
+FROM public.ecr.aws/lambda/python:3.9 as stage
 
-# Install dependencies including wget and unzip first
-RUN yum install -y wget unzip \
-    alsa-lib \
-    atk \
-    cups-libs \
-    gtk3 \
-    libXcomposite \
-    libXcursor \
-    libXi \
-    libXrandr \
-    libXScrnSaver \
-    pango \
-    xorg-x11-fonts-Type1 \
-    xorg-x11-fonts-misc \
-    chromium-headless \
-    && yum clean all
+RUN yum install -y -q sudo unzip
+ENV CHROMIUM_VERSION=1002910
 
-# Install Chrome for Testing (stable version 133.0.6943.98)
-RUN wget https://storage.googleapis.com/chrome-for-testing-public/133.0.6943.98/linux64/chrome-linux64.zip -O /tmp/chrome.zip \
-    && unzip /tmp/chrome.zip -d /opt \
-    && mv /opt/chrome-linux64 /opt/chrome \
-    && ln -s /opt/chrome/chrome /usr/bin/chrome \
-    && rm -f /tmp/chrome.zip
+# Install Chromium
+COPY install-browser.sh /tmp/
+RUN /usr/bin/bash /tmp/install-browser.sh
 
-# Install matching ChromeDriver 133.0.6943.98
-RUN wget https://storage.googleapis.com/chrome-for-testing-public/133.0.6943.98/linux64/chromedriver-linux64.zip -O /tmp/chromedriver.zip \
-    && unzip /tmp/chromedriver.zip -d /tmp \
-    && mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
-    && chmod +x /usr/local/bin/chromedriver \
-    && rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64
 
-# Copy your Python code
-COPY app.py ${LAMBDA_TASK_ROOT}
-COPY requirements.txt ./
+FROM public.ecr.aws/lambda/python:3.9 as base
 
-# Install Python dependencies
-RUN python3.9 -m pip install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
+COPY chrome-deps.txt /tmp/
+RUN yum install -y $(cat /tmp/chrome-deps.txt)
 
-# Set the command to your Lambda handler
-CMD [ "app.lambda_handler" ]
-    
+# Install Python dependencies for function
+COPY requirements.txt /tmp/
+RUN python3 -m pip install --upgrade pip -q
+RUN python3 -m pip install -r /tmp/requirements.txt -q
+
+COPY --from=stage /opt/chrome /opt/chrome
+COPY --from=stage /opt/chromedriver /opt/chromedriver
+
+# copy main.py
+COPY main.py /var/task/
+
+WORKDIR /var/task
+
+CMD [ "main.handler" ]
